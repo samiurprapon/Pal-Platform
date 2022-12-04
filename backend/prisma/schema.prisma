@@ -1,0 +1,222 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Credentials {
+  id         String   @id @default(uuid())
+  lastSignin DateTime @default(now())
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  Users      Users[]
+}
+
+model Users {
+  id                String              @id @default(uuid())
+  email             String              @unique
+  phone             String              @unique
+  image             String
+  name              String
+  bio               String
+  recovery          String              @unique
+  location          String
+  sex               SEX                 @default(Male)
+  cid               String
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  credential        Credentials         @relation(fields: [cid], references: [id])
+  Availabilities    Availabilities[]
+  Experiences       Experiences[]
+  TeachingInterests TeachingInterests[]
+  StudentCourses    StudentCourses[]
+  Academics         Academics[]
+  Posts             Posts[]
+  Rates             Rates[]
+  Connections       Connections[]
+  Conversations     Conversations[]
+}
+
+model TimeSlots {
+  id             String           @id @default(uuid())
+  day            WEEK_DAYS
+  startsAt       DateTime
+  endsAt         DateTime
+  Availabilities Availabilities[]
+  StudentCourses StudentCourses[]
+}
+
+model Availabilities {
+  id         String    @id @default(uuid())
+  semester   SEMESTER
+  year       Int
+  userId     String
+  timeSlotId String
+  users      Users     @relation(fields: [userId], references: [id])
+  timeslots  TimeSlots @relation(fields: [timeSlotId], references: [id])
+}
+
+model Academics {
+  id              String   @id @default(uuid())
+  nsuId           String   @unique
+  department      String
+  currentSemester SEMESTER
+  currentYear     Int      @default(dbgenerated("extract(year from now())"))
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  userId          String
+  users           Users    @relation(fields: [userId], references: [id])
+}
+
+model Courses {
+  id                String              @id @default(uuid())
+  name              String
+  code              String              @unique
+  credit            Int
+  description       String
+  StudentCourses    StudentCourses[]
+  Experiences       Experiences[]
+  TeachingInterests TeachingInterests[]
+  Posts             Posts[]
+  Rates             Rates[]
+}
+
+model StudentCourses {
+  id         String        @id @default(uuid())
+  status     COURSE_STATUS @default(Enrolled)
+  semester   SEMESTER
+  year       Int           @default(dbgenerated("extract(year from now())"))
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+  users      Users         @relation(fields: [userId], references: [id])
+  course     Courses       @relation(fields: [courseId], references: [id])
+  timeSlots  TimeSlots     @relation(fields: [timeSlotId], references: [id])
+  userId     String
+  courseId   String
+  timeSlotId String
+}
+
+model Experiences {
+  id          String   @id @default(uuid())
+  semester    SEMESTER
+  startDay    DateTime
+  endDay      DateTime
+  description String
+  userId      String
+  courseId    String
+  users       Users    @relation(fields: [userId], references: [id])
+  courses     Courses  @relation(fields: [courseId], references: [id])
+}
+
+model TeachingInterests {
+  id       String  @id @default(uuid())
+  notify   Boolean @default(false)
+  userId   String
+  courseId String
+  users    Users   @relation(fields: [userId], references: [id])
+  courses  Courses @relation(fields: [courseId], references: [id])
+}
+
+model Rates {
+  id        String   @id @default(uuid())
+  userId    String
+  courseId  String
+  minRate   Int
+  maxRate   Int
+  comment   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  users     Users    @relation(fields: [userId], references: [id])
+  courses   Courses  @relation(fields: [courseId], references: [id])
+  Posts     Posts[]
+}
+
+model Posts {
+  id          String        @id @default(uuid())
+  title       String
+  type        POST_TYPE
+  description String
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  authorId    String
+  courseId    String
+  rateId      String
+  users       Users         @relation(fields: [authorId], references: [id])
+  courses     Courses       @relation(fields: [courseId], references: [id])
+  rates       Rates         @relation(fields: [rateId], references: [id])
+  Connections Connections[]
+}
+
+model Connections {
+  id            String          @id @default(uuid())
+  status        CONNECTION_TYPE
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  postId        String
+  authorId      String
+  readerId      String?
+  posts         Posts           @relation(fields: [postId], references: [id])
+  users         Users           @relation(fields: [authorId], references: [id])
+  Conversations Conversations[]
+
+  @@unique([postId, authorId, readerId])
+}
+
+model Conversations {
+  id           String      @id @default(uuid())
+  connectionId String
+  senderId     String
+  receiverId   String
+  message      String
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  connections  Connections @relation(fields: [connectionId], references: [id])
+  users        Users       @relation(fields: [senderId], references: [id])
+}
+
+//  all the enums
+enum SEX {
+  Male
+  Female
+  Other
+}
+
+enum WEEK_DAYS {
+  Monday
+  Tuesday
+  Wednesday
+  Thursday
+  Friday
+  Saturday
+  Sunday
+}
+
+enum SEMESTER {
+  Spring
+  Summer
+  Fall
+}
+
+enum COURSE_STATUS {
+  Enrolled
+  Dropped
+  Completed
+}
+
+enum POST_TYPE {
+  Help
+  Offer
+  Knowledge
+}
+
+enum CONNECTION_TYPE {
+  Accepted
+  Pending
+  Rejected
+}
